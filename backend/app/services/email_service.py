@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import email
 import imaplib
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from email.header import decode_header
@@ -10,6 +11,13 @@ from email.message import Message
 from app.config import settings
 
 SCAN_LOOKBACK_DAYS = 30
+
+# Tamanho do lote de mensagens buscadas por comando FETCH — mantém as respostas do
+# IMAP em um tamanho razoável em caixas com muito e-mail.
+HEADER_FETCH_CHUNK_SIZE = 200
+BODY_FETCH_CHUNK_SIZE = 20
+
+_SEQ_NUM_RE = re.compile(rb"^(\d+)")
 
 
 @dataclass
@@ -88,6 +96,33 @@ def legacy_mailbox() -> MailboxConfig | None:
     )
 
 
+def _chunks(items: list[bytes], size: int) -> list[list[bytes]]:
+    return [items[i : i + size] for i in range(0, len(items), size)]
+
+
+def _fetch_bulk(client: imaplib.IMAP4, message_numbers: list[bytes], parts: str, chunk_size: int) -> dict[bytes, bytes]:
+    """Busca vários números de mensagem num único comando FETCH (em lotes), em vez de um fetch por mensagem."""
+    results: dict[bytes, bytes] = {}
+
+    for chunk in _chunks(message_numbers, chunk_size):
+        if not chunk:
+            continue
+        status, msg_data = client.fetch(b",".join(chunk), parts)
+        if status != "OK" or not msg_data:
+            continue
+
+        for item in msg_data:
+            if not isinstance(item, tuple):
+                continue
+            meta, content = item
+            match = _SEQ_NUM_RE.match(meta)
+            if not match:
+                continue
+            results[match.group(1)] = content
+
+    return results
+
+
 def fetch_boleto_candidates(mailbox: MailboxConfig, since_days: int = SCAN_LOOKBACK_DAYS) -> list[EmailAttachment]:
     client = _connect(mailbox)
     candidates: list[EmailAttachment] = []
@@ -101,17 +136,32 @@ def fetch_boleto_candidates(mailbox: MailboxConfig, since_days: int = SCAN_LOOKB
             return []
 
         message_numbers = data[0].split()
-        for num in message_numbers:
-            status, msg_data = client.fetch(num, "(RFC822)")
-            if status != "OK" or not msg_data or not isinstance(msg_data[0], tuple):
+
+        # Fase 1: busca só o assunto de cada mensagem (barato) para filtrar candidatos,
+        # em vez de baixar o e-mail inteiro (corpo + anexos) de tudo que chegou nos
+        # últimos `since_days` dias.
+        headers = _fetch_bulk(
+            client, message_numbers, "(BODY.PEEK[HEADER.FIELDS (SUBJECT)])", HEADER_FETCH_CHUNK_SIZE
+        )
+
+        matched_numbers = [
+            num
+            for num in message_numbers
+            if _subject_matches_keywords(
+                _decode_header_value(email.message_from_bytes(headers.get(num, b"")).get("Subject"))
+            )
+        ]
+
+        # Fase 2: só agora baixa o conteúdo completo (com anexos) dos que bateram o assunto.
+        bodies = _fetch_bulk(client, matched_numbers, "(RFC822)", BODY_FETCH_CHUNK_SIZE)
+
+        for num in matched_numbers:
+            raw_email = bodies.get(num)
+            if raw_email is None:
                 continue
 
-            raw_email = msg_data[0][1]
             msg = email.message_from_bytes(raw_email)
-
             subject = _decode_header_value(msg.get("Subject"))
-            if not _subject_matches_keywords(subject):
-                continue
 
             attachments = _extract_pdf_attachments(msg)
             if not attachments:

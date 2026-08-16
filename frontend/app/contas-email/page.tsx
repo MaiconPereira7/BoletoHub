@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { api } from "@/lib/api"
 import type { EmailAccount, EmailAccountCreateInput } from "@/types"
 
@@ -159,9 +160,8 @@ export default function ContasEmailPage() {
 
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <Label htmlFor="imap_password">Senha de app *</Label>
-                  <Input
+                  <PasswordInput
                     id="imap_password"
-                    type="password"
                     required
                     value={form.imap_password}
                     onChange={(e) => updateField("imap_password", e.target.value)}

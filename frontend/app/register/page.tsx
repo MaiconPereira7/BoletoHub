@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/lib/auth"
 
 export default function RegisterPage() {
@@ -82,9 +83,8 @@ export default function RegisterPage() {
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   minLength={8}
                   className="pl-9"

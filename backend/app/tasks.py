@@ -20,6 +20,7 @@ from app.schemas.boleto import BoletoCreate
 from app.services import boleto_service
 from app.services.crypto import decrypt
 from app.services.email_service import MailboxConfig, fetch_boleto_candidates, legacy_mailbox
+from app.services.mailer import render_password_reset_email, send_email
 from app.services.pdf_parser import PdfPasswordProtectedError, parse_boleto_pdf
 
 logger = logging.getLogger(__name__)
@@ -255,3 +256,14 @@ def update_overdue_boletos_task() -> dict:
     """Atualiza boletos pendentes com vencimento no passado para 'vencido'."""
     updated = asyncio.run(_run_isolated(_update_overdue_boletos()))
     return {"updated": updated}
+
+
+@celery_app.task(name="app.tasks.send_password_reset_email_task")
+def send_password_reset_email_task(to: str, reset_url: str) -> dict:
+    """Envia o e-mail de redefinição de senha (via SMTP)."""
+    try:
+        send_email(to, "Redefinir senha — BoletoHub", render_password_reset_email(reset_url))
+    except Exception as exc:  # noqa: BLE001 - falha de envio não deve derrubar o worker
+        logger.exception("Falha ao enviar e-mail de redefinição de senha para %s", to)
+        return {"sent": False, "error": str(exc)}
+    return {"sent": True}

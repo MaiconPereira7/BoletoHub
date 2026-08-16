@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { api } from "@/lib/api"
 import type { Boleto } from "@/types"
 
@@ -134,9 +135,8 @@ export default function BoletoDetailPage() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="senha">Senha do PDF</Label>
-                    <Input
+                    <PasswordInput
                       id="senha"
-                      type="password"
                       required
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}

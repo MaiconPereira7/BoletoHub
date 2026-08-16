@@ -46,6 +46,18 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # E-mail transacional (SMTP) — recuperação de senha
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    smtp_from: str = ""
+    password_reset_token_expire_minutes: int = 30
+
+    # URL pública do frontend, usada para montar links em e-mails
+    frontend_url: str = "http://localhost:3000"
+
 
 @lru_cache
 def get_settings() -> Settings:

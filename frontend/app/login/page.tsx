@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { useAuth } from "@/lib/auth"
 
 export default function LoginPage() {
@@ -62,12 +63,16 @@ export default function LoginPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <Link href="/esqueci-senha" className="text-xs font-medium text-primary hover:underline">
+                  Esqueci minha senha
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   required
                   className="pl-9"
                   value={password}
