@@ -16,6 +16,7 @@ from app.models.boleto import Boleto, BoletoOrigem, BoletoStatus
 from app.models.user import User
 from app.schemas.boleto import BoletoCreate, BoletoListResponse, BoletoResponse, BoletoUnlockRequest, BoletoUpdate
 from app.schemas.scan import ScanStatusResponse, ScanTriggerResponse
+from app.schemas.stats import BoletoStatsResponse
 from app.services import boleto_service
 from app.services.pdf_parser import PdfPasswordProtectedError, parse_boleto_pdf
 
@@ -160,6 +161,14 @@ async def unlock_boleto(
             )
 
     return await boleto_service.unlock_boleto(db, boleto, data)
+
+
+@router.get("/stats", response_model=BoletoStatsResponse)
+async def get_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BoletoStatsResponse:
+    return await boleto_service.get_stats(db, current_user.id)
 
 
 @router.get("/scan/{task_id}", response_model=ScanStatusResponse)

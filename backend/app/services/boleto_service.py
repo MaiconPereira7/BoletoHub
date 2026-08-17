@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.boleto import Boleto, BoletoOrigem, BoletoStatus
+from app.models.category import Category
 from app.schemas.boleto import BoletoCreate, BoletoUpdate
+from app.schemas.stats import BoletoStatsResponse, CategoriaGastoItem, MesGastoItem
 from app.services.pdf_parser import BoletoData
 
 
@@ -130,3 +132,106 @@ async def update_boleto(db: AsyncSession, boleto: Boleto, data: BoletoUpdate) ->
 async def delete_boleto(db: AsyncSession, boleto: Boleto) -> None:
     await db.delete(boleto)
     await db.commit()
+
+
+def _month_range(year: int, month: int) -> tuple[date, date]:
+    start = date(year, month, 1)
+    if month == 12:
+        end = date(year + 1, 1, 1)
+    else:
+        end = date(year, month + 1, 1)
+    return start, end
+
+
+def _last_n_months(today: date, n: int) -> list[tuple[date, date, str]]:
+    months: list[tuple[date, date, str]] = []
+    for offset in range(n - 1, -1, -1):
+        total_month_index = today.year * 12 + (today.month - 1) - offset
+        year, month = divmod(total_month_index, 12)
+        month += 1
+        start, end = _month_range(year, month)
+        months.append((start, end, f"{year:04d}-{month:02d}"))
+    return months
+
+
+async def get_stats(db: AsyncSession, user_id: uuid.UUID) -> BoletoStatsResponse:
+    today = date.today()
+    month_start, next_month_start = _month_range(today.year, today.month)
+
+    total_pendente = await db.scalar(
+        select(func.coalesce(func.sum(Boleto.valor), 0)).where(
+            Boleto.user_id == user_id,
+            Boleto.status == BoletoStatus.PENDENTE,
+            Boleto.data_vencimento >= month_start,
+            Boleto.data_vencimento < next_month_start,
+        )
+    )
+    total_vencido = await db.scalar(
+        select(func.coalesce(func.sum(Boleto.valor), 0)).where(
+            Boleto.user_id == user_id,
+            Boleto.status == BoletoStatus.VENCIDO,
+            Boleto.data_vencimento >= month_start,
+            Boleto.data_vencimento < next_month_start,
+        )
+    )
+    total_pago = await db.scalar(
+        select(func.coalesce(func.sum(Boleto.valor), 0)).where(
+            Boleto.user_id == user_id,
+            Boleto.status == BoletoStatus.PAGO,
+            Boleto.data_pagamento >= month_start,
+            Boleto.data_pagamento < next_month_start,
+        )
+    )
+
+    contagem_result = await db.execute(
+        select(Boleto.status, func.count()).where(Boleto.user_id == user_id).group_by(Boleto.status)
+    )
+    contagem_por_status = {status.value: count for status, count in contagem_result.all()}
+
+    gastos_por_mes: list[MesGastoItem] = []
+    for start, end, label in _last_n_months(today, 6):
+        total = await db.scalar(
+            select(func.coalesce(func.sum(Boleto.valor), 0)).where(
+                Boleto.user_id == user_id,
+                Boleto.status == BoletoStatus.PAGO,
+                Boleto.data_pagamento >= start,
+                Boleto.data_pagamento < end,
+            )
+        )
+        gastos_por_mes.append(MesGastoItem(mes=label, total_pago=total))
+
+    gastos_categoria_result = await db.execute(
+        select(Category.name, func.sum(Boleto.valor))
+        .select_from(Boleto)
+        .outerjoin(Category, Boleto.category_id == Category.id)
+        .where(
+            Boleto.user_id == user_id,
+            Boleto.status == BoletoStatus.PAGO,
+            Boleto.data_pagamento >= month_start,
+            Boleto.data_pagamento < next_month_start,
+        )
+        .group_by(Category.name)
+    )
+    gastos_por_categoria = [
+        CategoriaGastoItem(categoria=nome or "Sem categoria", valor=valor)
+        for nome, valor in gastos_categoria_result.all()
+    ]
+
+    proximos_result = await db.execute(
+        select(Boleto)
+        .where(Boleto.user_id == user_id, Boleto.status == BoletoStatus.PENDENTE)
+        .options(selectinload(Boleto.category))
+        .order_by(Boleto.data_vencimento.asc())
+        .limit(5)
+    )
+    proximos_vencer = list(proximos_result.scalars().all())
+
+    return BoletoStatsResponse(
+        total_pendente=total_pendente,
+        total_pago=total_pago,
+        total_vencido=total_vencido,
+        contagem_por_status=contagem_por_status,
+        gastos_por_mes=gastos_por_mes,
+        gastos_por_categoria=gastos_por_categoria,
+        proximos_vencer=proximos_vencer,
+    )

@@ -12,7 +12,7 @@ DEFAULT_CATEGORIES: list[tuple[str, str]] = [
     ("Moradia", "#2563eb"),
     ("Energia", "#f59e0b"),
     ("Internet", "#8b5cf6"),
-    ("Água", "#06b6d4"),
+    ("Água", "#0284c7"),
     ("Educação", "#10b981"),
     ("Saúde", "#ef4444"),
     ("Outros", "#64748b"),
