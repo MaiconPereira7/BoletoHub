@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 const TOKEN_COOKIE = "boletohub_token"
-const PROTECTED_PREFIXES = ["/dashboard", "/boletos", "/contas-email"]
+const PROTECTED_PREFIXES = ["/dashboard", "/boletos", "/contas-email", "/categorias"]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -23,5 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/boletos/:path*"],
+  matcher: ["/dashboard/:path*", "/boletos/:path*", "/categorias/:path*"],
 }

@@ -34,13 +34,14 @@ async def list_boletos(
     status_filter: BoletoStatus | None = Query(default=None, alias="status"),
     vencimento_de: date | None = None,
     vencimento_ate: date | None = None,
+    category_id: uuid.UUID | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> BoletoListResponse:
     items, total = await boleto_service.list_boletos(
-        db, current_user.id, status_filter, vencimento_de, vencimento_ate, page, limit
+        db, current_user.id, status_filter, vencimento_de, vencimento_ate, category_id, page, limit
     )
     return BoletoListResponse(items=items, total=total, page=page, limit=limit)
 

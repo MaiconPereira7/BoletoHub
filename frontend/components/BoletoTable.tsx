@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Inbox, Lock } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { CategoryBadge } from "@/components/CategoryBadge"
 import { StatusBadge } from "@/components/StatusBadge"
 import type { Boleto } from "@/types"
 
@@ -36,6 +37,7 @@ export function BoletoTable({ boletos }: { boletos: Boleto[] }) {
             <th className="p-3 font-medium text-muted-foreground">Valor</th>
             <th className="p-3 font-medium text-muted-foreground">Vencimento</th>
             <th className="p-3 font-medium text-muted-foreground">Status</th>
+            <th className="p-3 font-medium text-muted-foreground">Categoria</th>
             <th className="p-3 font-medium text-muted-foreground">Origem</th>
           </tr>
         </thead>
@@ -58,6 +60,9 @@ export function BoletoTable({ boletos }: { boletos: Boleto[] }) {
                 ) : (
                   <StatusBadge status={boleto.status} />
                 )}
+              </td>
+              <td className="p-3">
+                <CategoryBadge category={boleto.category} />
               </td>
               <td className="p-3 capitalize text-muted-foreground">{boleto.origem}</td>
             </tr>

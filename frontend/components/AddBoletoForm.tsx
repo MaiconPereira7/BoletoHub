@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { FileText, PenLine, Upload } from "lucide-react"
 
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api } from "@/lib/api"
-import type { BoletoCreateInput } from "@/types"
+import type { BoletoCreateInput, Category } from "@/types"
 
 const EMPTY_FORM: BoletoCreateInput = {
   beneficiario: "",
@@ -17,6 +17,7 @@ const EMPTY_FORM: BoletoCreateInput = {
   linha_digitavel: "",
   data_vencimento: "",
   observacoes: "",
+  category_id: "",
 }
 
 export function AddBoletoForm() {
@@ -24,10 +25,30 @@ export function AddBoletoForm() {
   const [file, setFile] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryTouched, setCategoryTouched] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    api.get<Category[]>("/categories").then(({ data }) => setCategories(data))
+  }, [])
 
   function updateField<K extends keyof BoletoCreateInput>(field: K, value: BoletoCreateInput[K]) {
     setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  async function handleBeneficiarioBlur() {
+    if (categoryTouched || !form.beneficiario) return
+    try {
+      const { data } = await api.get<Category | null>("/categories/suggest", {
+        params: { beneficiario: form.beneficiario },
+      })
+      if (data) {
+        setForm((prev) => ({ ...prev, category_id: data.id }))
+      }
+    } catch {
+      return
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -41,6 +62,7 @@ export function AddBoletoForm() {
         pagador: form.pagador || undefined,
         linha_digitavel: form.linha_digitavel || undefined,
         observacoes: form.observacoes || undefined,
+        category_id: form.category_id || undefined,
       })
       router.push("/dashboard")
       router.refresh()
@@ -130,12 +152,33 @@ export function AddBoletoForm() {
               required
               value={form.beneficiario}
               onChange={(e) => updateField("beneficiario", e.target.value)}
+              onBlur={handleBeneficiarioBlur}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="pagador">Pagador</Label>
             <Input id="pagador" value={form.pagador} onChange={(e) => updateField("pagador", e.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="category_id">Categoria</Label>
+            <select
+              id="category_id"
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={form.category_id || ""}
+              onChange={(e) => {
+                setCategoryTouched(true)
+                updateField("category_id", e.target.value)
+              }}
+            >
+              <option value="">Sem categoria</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col gap-1.5">

@@ -16,7 +16,7 @@ from app.schemas.user import (
     UserCreate,
     UserResponse,
 )
-from app.services import password_reset_service
+from app.services import category_service, password_reset_service
 from app.services.auth_service import (
     authenticate_user,
     create_access_token,
@@ -35,7 +35,9 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)) -> U
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="E-mail já cadastrado")
 
-    return await register_user(db, payload.email, payload.password, payload.full_name)
+    user = await register_user(db, payload.email, payload.password, payload.full_name)
+    await category_service.create_default_categories(db, user.id)
+    return user
 
 
 @router.post("/login", response_model=Token)

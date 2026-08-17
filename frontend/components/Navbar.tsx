@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FileStack, LogOut, Mail, Moon, Receipt, Sun } from "lucide-react"
+import { FileStack, LogOut, Mail, Moon, Receipt, Sun, Tag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -12,6 +12,7 @@ import { useTheme } from "@/lib/theme"
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: FileStack },
   { href: "/boletos/novo", label: "Novo boleto", icon: Receipt },
+  { href: "/categorias", label: "Categorias", icon: Tag },
   { href: "/contas-email", label: "Contas de e-mail", icon: Mail },
 ]
 

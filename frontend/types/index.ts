@@ -10,6 +10,25 @@ export interface User {
   created_at: string
 }
 
+export interface Category {
+  id: string
+  user_id: string
+  name: string
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CategoryCreateInput {
+  name: string
+  color: string
+}
+
+export interface CategoryUpdateInput {
+  name?: string
+  color?: string
+}
+
 export interface Boleto {
   id: string
   user_id: string
@@ -25,6 +44,8 @@ export interface Boleto {
   precisa_senha: boolean
   arquivo_pdf_path: string | null
   observacoes: string | null
+  category_id: string | null
+  category: Category | null
   created_at: string
   updated_at: string
 }
@@ -44,6 +65,7 @@ export interface BoletoCreateInput {
   codigo_barras?: string
   data_vencimento: string
   observacoes?: string
+  category_id?: string
 }
 
 export interface BoletoUpdateInput {
@@ -56,12 +78,14 @@ export interface BoletoUpdateInput {
   data_pagamento?: string
   status?: BoletoStatus
   observacoes?: string
+  category_id?: string | null
 }
 
 export interface BoletoFilters {
   status?: BoletoStatus
   vencimento_de?: string
   vencimento_ate?: string
+  category_id?: string
   page?: number
   limit?: number
 }

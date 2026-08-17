@@ -5,6 +5,7 @@ from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.boleto import Boleto, BoletoOrigem, BoletoStatus
 from app.schemas.boleto import BoletoCreate, BoletoUpdate
@@ -16,16 +17,27 @@ async def get_by_linha_digitavel(db: AsyncSession, linha_digitavel: str) -> Bole
     return result.scalar_one_or_none()
 
 
+async def _reload_with_category(db: AsyncSession, boleto_id: uuid.UUID) -> Boleto:
+    result = await db.execute(
+        select(Boleto)
+        .where(Boleto.id == boleto_id)
+        .options(selectinload(Boleto.category))
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one()
+
+
 async def list_boletos(
     db: AsyncSession,
     user_id: uuid.UUID,
     status: BoletoStatus | None = None,
     vencimento_de: date | None = None,
     vencimento_ate: date | None = None,
+    category_id: uuid.UUID | None = None,
     page: int = 1,
     limit: int = 20,
 ) -> tuple[list[Boleto], int]:
-    query = select(Boleto).where(Boleto.user_id == user_id)
+    query = select(Boleto).where(Boleto.user_id == user_id).options(selectinload(Boleto.category))
 
     if status is not None:
         query = query.where(Boleto.status == status)
@@ -33,6 +45,8 @@ async def list_boletos(
         query = query.where(Boleto.data_vencimento >= vencimento_de)
     if vencimento_ate is not None:
         query = query.where(Boleto.data_vencimento <= vencimento_ate)
+    if category_id is not None:
+        query = query.where(Boleto.category_id == category_id)
 
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar_one()
@@ -44,7 +58,9 @@ async def list_boletos(
 
 async def get_boleto(db: AsyncSession, user_id: uuid.UUID, boleto_id: uuid.UUID) -> Boleto | None:
     result = await db.execute(
-        select(Boleto).where(Boleto.id == boleto_id, Boleto.user_id == user_id)
+        select(Boleto)
+        .where(Boleto.id == boleto_id, Boleto.user_id == user_id)
+        .options(selectinload(Boleto.category))
     )
     return result.scalar_one_or_none()
 
@@ -64,8 +80,7 @@ async def create_boleto(
     )
     db.add(boleto)
     await db.commit()
-    await db.refresh(boleto)
-    return boleto
+    return await _reload_with_category(db, boleto.id)
 
 
 async def create_password_protected_boleto(
@@ -84,8 +99,7 @@ async def create_password_protected_boleto(
     )
     db.add(boleto)
     await db.commit()
-    await db.refresh(boleto)
-    return boleto
+    return await _reload_with_category(db, boleto.id)
 
 
 async def unlock_boleto(db: AsyncSession, boleto: Boleto, data: BoletoData) -> Boleto:
@@ -97,8 +111,7 @@ async def unlock_boleto(db: AsyncSession, boleto: Boleto, data: BoletoData) -> B
     boleto.precisa_senha = False
 
     await db.commit()
-    await db.refresh(boleto)
-    return boleto
+    return await _reload_with_category(db, boleto.id)
 
 
 async def update_boleto(db: AsyncSession, boleto: Boleto, data: BoletoUpdate) -> Boleto:
@@ -111,8 +124,7 @@ async def update_boleto(db: AsyncSession, boleto: Boleto, data: BoletoUpdate) ->
         setattr(boleto, field, value)
 
     await db.commit()
-    await db.refresh(boleto)
-    return boleto
+    return await _reload_with_category(db, boleto.id)
 
 
 async def delete_boleto(db: AsyncSession, boleto: Boleto) -> None:

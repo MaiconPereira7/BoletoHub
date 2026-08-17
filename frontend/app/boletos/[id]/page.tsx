@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/ui/password-input"
 import { api } from "@/lib/api"
-import type { Boleto } from "@/types"
+import type { Boleto, Category } from "@/types"
 
 function formatCurrency(value: string | null) {
   if (value === null) return "—"
@@ -35,6 +35,7 @@ export default function BoletoDetailPage() {
   const [senha, setSenha] = useState("")
   const [unlocking, setUnlocking] = useState(false)
   const [unlockError, setUnlockError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
 
   const loadBoleto = useCallback(async () => {
     setLoading(true)
@@ -52,6 +53,20 @@ export default function BoletoDetailPage() {
   useEffect(() => {
     loadBoleto()
   }, [loadBoleto])
+
+  useEffect(() => {
+    api.get<Category[]>("/categories").then(({ data }) => setCategories(data))
+  }, [])
+
+  async function changeCategory(categoryId: string) {
+    setSaving(true)
+    try {
+      const { data } = await api.patch<Boleto>(`/boletos/${params.id}`, { category_id: categoryId || null })
+      setBoleto(data)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function markAsPaid() {
     setSaving(true)
@@ -167,6 +182,24 @@ export default function BoletoDetailPage() {
                 <div>
                   <dt className="text-muted-foreground">Origem</dt>
                   <dd className="font-medium capitalize">{boleto.origem}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Categoria</dt>
+                  <dd>
+                    <select
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={boleto.category_id || ""}
+                      disabled={saving}
+                      onChange={(e) => changeCategory(e.target.value)}
+                    >
+                      <option value="">Sem categoria</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </dd>
                 </div>
                 <div className="col-span-2">
                   <dt className="text-muted-foreground">Linha digitável</dt>

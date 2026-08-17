@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import auth, boletos, email_accounts, health
+from app.routers import auth, boletos, categories, email_accounts, health
 
 
 @asynccontextmanager
@@ -29,4 +29,5 @@ app.add_middleware(
 app.include_router(health.router, prefix=settings.api_v1_prefix)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(boletos.router, prefix=settings.api_v1_prefix)
+app.include_router(categories.router, prefix=settings.api_v1_prefix)
 app.include_router(email_accounts.router, prefix=settings.api_v1_prefix)

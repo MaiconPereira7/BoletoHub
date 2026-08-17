@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { FilterX } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { BoletoFilters, BoletoStatus } from "@/types"
+import { api } from "@/lib/api"
+import type { BoletoFilters, BoletoStatus, Category } from "@/types"
 
 interface FilterBarProps {
   filters: BoletoFilters
@@ -20,6 +22,12 @@ const STATUS_OPTIONS: { value: BoletoStatus | ""; label: string }[] = [
 ]
 
 export function FilterBar({ filters, onChange }: FilterBarProps) {
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    api.get<Category[]>("/categories").then(({ data }) => setCategories(data))
+  }, [])
+
   return (
     <div className="flex flex-wrap items-end gap-4 rounded-xl border bg-card p-4 shadow-soft">
       <div className="flex flex-col gap-1.5">
@@ -58,6 +66,23 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           value={filters.vencimento_ate || ""}
           onChange={(e) => onChange({ ...filters, vencimento_ate: e.target.value || undefined, page: 1 })}
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="category_id">Categoria</Label>
+        <select
+          id="category_id"
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          value={filters.category_id || ""}
+          onChange={(e) => onChange({ ...filters, category_id: e.target.value || undefined, page: 1 })}
+        >
+          <option value="">Todas</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <Button

@@ -7,6 +7,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.boleto import BoletoOrigem, BoletoStatus
+from app.schemas.category import CategoryResponse
 
 
 class BoletoBase(BaseModel):
@@ -17,6 +18,7 @@ class BoletoBase(BaseModel):
     codigo_barras: str | None = Field(default=None, max_length=64)
     data_vencimento: date
     observacoes: str | None = None
+    category_id: uuid.UUID | None = None
 
 
 class BoletoCreate(BoletoBase):
@@ -33,6 +35,7 @@ class BoletoUpdate(BaseModel):
     data_pagamento: date | None = None
     status: BoletoStatus | None = None
     observacoes: str | None = None
+    category_id: uuid.UUID | None = None
 
 
 class BoletoResponse(BoletoBase):
@@ -48,6 +51,7 @@ class BoletoResponse(BoletoBase):
     precisa_senha: bool
     data_pagamento: date | None
     arquivo_pdf_path: str | None
+    category: CategoryResponse | None = None
     created_at: datetime
     updated_at: datetime
 
